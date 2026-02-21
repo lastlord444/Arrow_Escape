@@ -1,0 +1,9 @@
+{
+    "id": "card-level-1",
+    "levelId": "level-1",
+    "animal": "Kedi",
+    "emoji": "🐱",
+    "rarity": "common",
+    "title": "İlk Kurtarma",
+    "desc": "Kediyi çıktışa kadar yönlendir!"
+}
