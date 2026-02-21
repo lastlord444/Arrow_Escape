@@ -1,10 +1,9 @@
 describe('Smoke Test', () => {
-    it('basit matematik testi', () => {
-        expect(1 + 1).toBe(2);
+    it('true is true', () => {
+        expect(true).toBe(true);
     });
 
-    it('GRID_SIZE 6 olmali', () => {
-        const GRID_SIZE = 6;
-        expect(GRID_SIZE).toBe(6);
+    it('1 + 1 = 2', () => {
+        expect(1 + 1).toBe(2);
     });
 });

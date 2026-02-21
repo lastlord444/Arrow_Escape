@@ -1,26 +1,18 @@
-/**
- * Game Module - Phaser Oyun Motoru Entegrasyonu
- *
- * Bu modül Arrow Escape oyununu içerir:
- * - 6x6 grid sistemi
- * - Ok hareket mantığı
- * - Win/Fail state kontrolü
- */
+/** Arrow Escape - Game Engine Public API */
 
-// Export edilecek oyun tipleri ve fonksiyonlar buraya eklenecek
-export type ArrowDirection = 'up' | 'down' | 'left' | 'right';
+export { GRID_SIZE } from './grid';
+export { parseLevel } from './level';
+export { checkWin } from './rules';
+export { tryMoveArrow } from './move';
+export { createArrowEscapeGame } from './phaser/createGame';
 
-export interface GridCell {
-    type: 'empty' | 'arrow' | 'animal' | 'exit';
-    direction?: ArrowDirection;
-    animalId?: string;
-}
+export type {
+    ArrowDirection,
+    CellType,
+    GridCell,
+    GameState,
+    Position,
+    LevelDefinition,
+} from './types';
 
-export interface GameState {
-    grid: GridCell[][];
-    moves: number;
-    isWon: boolean;
-    isLost: boolean;
-}
-
-export const GRID_SIZE = 6;
+export { charToCell, cellToChar } from './types';
