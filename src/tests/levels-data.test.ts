@@ -1,12 +1,9 @@
 /** Levels Data Tests - globals mode */
 
-// @ts-expect-error vitest globals
-const _levels = await import('../content/levels/index');
-// @ts-expect-error vitest globals
-const _levelParser = await import('../game/level');
-
-const { LEVELS, getLevelById, getAllLevels } = _levels;
-const { parseLevel } = _levelParser;
+import { LEVELS, getLevelById, getAllLevels } from '../content/levels/index';
+import { parseLevel } from '../game/level';
+import { checkWin } from '../game/rules';
+import { findCell, countArrowsBetween } from '../game/grid';
 
 describe('Levels Data', () => {
     it('has exactly 5 levels', () => {
@@ -25,6 +22,37 @@ describe('Levels Data', () => {
         expect(uniqueIds.size).toBe(5);
     });
 
+    it('all levels are solvable: A and E on same row or col', () => {
+        LEVELS.forEach(level => {
+            const grid = parseLevel(level);
+            const animal = findCell(grid, 'animal');
+            const exit = findCell(grid, 'exit');
+            expect(animal).toBeDefined();
+            expect(exit).toBeDefined();
+
+            const sameRow = animal!.row === exit!.row;
+            const sameCol = animal!.col === exit!.col;
+            expect(sameRow || sameCol).toBe(true);
+        });
+    });
+
+    it('all levels are not initially won (checkWin false)', () => {
+        LEVELS.forEach(level => {
+            const grid = parseLevel(level);
+            expect(checkWin(grid)).toBe(false);
+        });
+    });
+
+    it('all levels have at least 1 arrow between A and E (no trivial win)', () => {
+        LEVELS.forEach(level => {
+            const grid = parseLevel(level);
+            const animal = findCell(grid, 'animal')!;
+            const exit = findCell(grid, 'exit')!;
+            const arrowsBetween = countArrowsBetween(grid, animal, exit);
+            expect(arrowsBetween).toBeGreaterThanOrEqual(1);
+        });
+    });
+
     it('getLevelById returns correct level', () => {
         const level1 = getLevelById('level-1');
         expect(level1).toBeDefined();
@@ -39,13 +67,6 @@ describe('Levels Data', () => {
     it('getAllLevels returns a copy of LEVELS', () => {
         const copy = getAllLevels();
         expect(copy).toEqual(LEVELS);
-        expect(copy).not.toBe(LEVELS); // reference farkli
-    });
-
-    it('level-1 has A and E in correct positions', () => {
-        const level1 = getLevelById('level-1');
-        const grid = parseLevel(level1!);
-        expect(grid[0][0].type).toBe('animal');
-        expect(grid[5][5].type).toBe('exit');
+        expect(copy).not.toBe(LEVELS);
     });
 });
