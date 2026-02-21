@@ -7,6 +7,7 @@ import { Hud } from '@/ui/components/Hud';
 import { PowerBar } from '@/ui/components/PowerBar';
 import { LevelCompleteModal } from '@/ui/components/LevelCompleteModal';
 import { updateLevelCompleted, unlockNextLevel, getStarsForLevel } from '@/ui/storage/progress';
+import { addCard } from '@/storage/album';
 
 export function GamePage() {
     const { id } = useParams<{ id: string }>();
@@ -62,9 +63,10 @@ export function GamePage() {
                     const calcStars = getStarsForLevel(state.moves);
                     setStars(calcStars);
                     setShowModal(true);
-                    // Save progress
+                    // Save progress + album
                     updateLevelCompleted(levelId, state.moves);
                     unlockNextLevel(levelId, allLevels.map(l => l.id));
+                    addCard(`card-${levelId}`);
                 }
             }
         }, 300);
