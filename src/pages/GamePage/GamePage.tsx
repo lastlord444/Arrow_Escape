@@ -14,6 +14,9 @@ export function GamePage() {
     useEffect(() => {
         if (!id) return;
 
+        // ID değişince win state reset
+        setIsWon(false);
+
         const levelDef = getLevelById(id);
         if (!levelDef || !containerRef.current) return;
 
@@ -34,6 +37,7 @@ export function GamePage() {
             clearInterval(checkWinInterval);
             game.destroy(true);
             gameRef.current = null;
+            setIsWon(false); // cleanup'ta reset
         };
     }, [id]);
 
