@@ -20,5 +20,9 @@ export function Page({ children, back = true }: PropsWithChildren<{
     backButton.hide();
   }, [back]);
 
-  return <>{children}</>;
+  return (
+    <div style={{ height: '100dvh', width: '100%', overflow: 'hidden' }}>
+      {children}
+    </div>
+  );
 }

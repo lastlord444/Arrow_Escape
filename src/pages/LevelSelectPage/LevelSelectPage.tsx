@@ -23,12 +23,13 @@ export function LevelSelectPage() {
                 style={{
                     position: 'relative',
                     width: '100%',
-                    minHeight: '100vh',
+                    height: '100%',
                     backgroundColor: COLORS.bgDark,
                     padding: '20px',
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
+                    overflow: 'hidden',
                 }}
             >
                 <h1 style={{ color: COLORS.neonBlue, marginBottom: '10px' }}>Arrow Escape</h1>

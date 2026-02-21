@@ -94,10 +94,11 @@ export function GamePage() {
                 style={{
                     position: 'relative',
                     width: '100%',
-                    height: '100vh',
+                    height: '100%',
                     backgroundColor: '#1a1f36',
                     display: 'flex',
                     flexDirection: 'column',
+                    overflow: 'hidden',
                 }}
             >
                 <Hud levelNumber={levelIndex + 1} />
@@ -106,7 +107,8 @@ export function GamePage() {
                     ref={containerRef}
                     style={{
                         flex: 1,
-                        position: 'relative',
+                        minHeight: 0,
+                        overflow: 'hidden',
                     }}
                 />
 
