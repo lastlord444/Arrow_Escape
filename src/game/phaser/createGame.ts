@@ -1,11 +1,11 @@
-/** Arrow Escape - Phaser Game Factory */
+/** Arrow Escape - Phaser Game Factory (Responsive) */
 
 import Phaser from 'phaser';
 import { ArrowEscapeScene } from './ArrowEscapeScene';
 import type { LevelDefinition } from '../types';
 
 /**
- * Phaser game instance oluştur.
+ * Phaser game instance oluştur (responsive).
  * @param domParent DOM elementi (Phaser canvas'ı buraya yerleşir)
  * @param level Level tanımı
  */
@@ -13,12 +13,19 @@ export function createArrowEscapeGame(
     domParent: HTMLElement,
     level: LevelDefinition
 ): Phaser.Game {
+    const parentWidth = domParent.clientWidth || 360;
+    const parentHeight = domParent.clientHeight || 640;
+
     const config: Phaser.Types.Core.GameConfig = {
         type: Phaser.AUTO,
         parent: domParent,
-        width: 360,
-        height: 400,
-        backgroundColor: '#e0e0e0',
+        width: parentWidth,
+        height: parentHeight,
+        backgroundColor: '#1a1f36',
+        scale: {
+            mode: Phaser.Scale.RESIZE,
+            autoCenter: Phaser.Scale.CENTER_BOTH,
+        },
         scene: ArrowEscapeScene,
     };
 
@@ -29,3 +36,5 @@ export function createArrowEscapeGame(
 
     return game;
 }
+
+export type PhaserGame = Phaser.Game;
