@@ -31,10 +31,10 @@ try {
     .then(() => {
       root.render(
         <StrictMode>
-          <Root/>
+          <Root />
         </StrictMode>,
       );
     });
-} catch (e) {
-  root.render(<EnvUnsupported/>);
+} catch {
+  root.render(<EnvUnsupported />);
 }
