@@ -1,8 +1,10 @@
 import { COLORS } from '@/ui/theme/colors';
 import { useNavigate } from 'react-router-dom';
+import { getCardByLevelId } from '@/content/rescueCards';
+import { shareWin } from '@/telegram/share';
 
 interface LevelCompleteModalProps {
-    levelId?: string;
+    levelId: string;
     levelName: string;
     stars: 0 | 1 | 2 | 3;
     moves: number;
@@ -12,8 +14,7 @@ interface LevelCompleteModalProps {
 }
 
 export function LevelCompleteModal({
-    // levelId kullanılmıyor, ileride eklenebilir
-    // _levelId,
+    levelId,
     levelName,
     stars,
     moves,
@@ -35,6 +36,10 @@ export function LevelCompleteModal({
         onClose();
     };
 
+    const handleShare = () => {
+        shareWin(levelId, moves, stars);
+    };
+
     return (
         <div
             style={{
@@ -53,7 +58,49 @@ export function LevelCompleteModal({
             }}
         >
             {/* Confetti placeholder */}
-            <div style={{ marginBottom: '20px', fontSize: '48px' }}>🎉</div>
+            <div style={{ marginBottom: '15px', fontSize: '36px' }}>🎉</div>
+
+            {/* Rescue Card */}
+            {(() => {
+                const card = getCardByLevelId(levelId);
+                if (!card) return null;
+                const rarityMap: Record<string, string> = {
+                    common: '#4a5568',
+                    rare: '#00d4ff',
+                    legendary: '#ffdd00',
+                };
+                const rarityColor = rarityMap[card.rarity] || '#4a5568';
+
+                return (
+                    <div
+                        style={{
+                            marginBottom: '20px',
+                            padding: '20px',
+                            backgroundColor: 'rgba(0, 212, 255, 0.1)',
+                            border: `2px solid ${rarityColor as string}`,
+                            borderRadius: '12px',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            gap: '8px',
+                        }}
+                    >
+                        <div style={{ fontSize: '48px' }}>{card.emoji}</div>
+                        <div style={{ color: COLORS.text, fontWeight: 'bold', fontSize: '18px' }}>
+                            {card.title}
+                        </div>
+                        <div style={{ color: rarityColor, fontSize: '12px', textTransform: 'uppercase' }}>
+                            {card.rarity}
+                        </div>
+                        <div style={{ color: COLORS.textDim, fontSize: '12px' }}>
+                            {card.desc}
+                        </div>
+                        <div style={{ color: COLORS.neonGreen, fontSize: '12px', fontWeight: 'bold' }}>
+                            KURTARILDI! ✅
+                        </div>
+                    </div>
+                );
+            })()}
 
             <div
                 style={{
@@ -103,11 +150,26 @@ export function LevelCompleteModal({
                 </div>
 
                 {/* Buttons */}
-                <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+                <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                    <button
+                        onClick={handleShare}
+                        style={{
+                            padding: '12px 20px',
+                            backgroundColor: COLORS.neonBlue,
+                            border: 'none',
+                            borderRadius: '8px',
+                            color: '#fff',
+                            fontSize: '14px',
+                            fontWeight: 'bold',
+                            cursor: 'pointer',
+                        }}
+                    >
+                        📤 Paylaş
+                    </button>
                     <button
                         onClick={handleBack}
                         style={{
-                            padding: '12px 24px',
+                            padding: '12px 20px',
                             backgroundColor: COLORS.buttonBg,
                             border: '1px solid #4a5568',
                             borderRadius: '8px',
