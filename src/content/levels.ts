@@ -13,40 +13,42 @@ export interface Level {
 }
 
 /**
- * 5 Örnek Level (MVP0)
+ * Level (MVP0)
  * Grid sembolleri:
- * - .: boş
- * - ^: ok (yukarı)
- * - v: ok (aşağı)
+ * - .: bos
+ * - ^: ok (yukari)
+ * - v: ok (asagi)
  * - <: ok (sol)
- * - >: ok (sağ)
+ * - >: ok (sag)
  * - A: hayvan (animal)
- * - E: çıkış (exit)
+ * - E: cikis (exit)
+ *
+ * Her satir tam 6 karakter olmali!
  */
 export const LEVELS: Level[] = [
     {
         id: 1,
-        name: 'İlk Kurtuluş',
+        name: 'Ilk Kurtulus',
         animalId: 'cat_01',
         levelDef: {
             id: 'level-1',
             grid: [
-                '>....',
-                '..v..',
-                'A.>..',
-                '.....',
+                '>.....',
+                '..v...',
+                'A.>...',
+                '......',
                 '....E.',
-                '.....',
+                '......',
             ],
-            meta: { name: 'İlk Kurtuluş' },
+            meta: { name: 'Ilk Kurtulus' },
         },
         targetMoves: 5,
     },
-    // Diğer 4 level sonraki PR'da eklenecek
+    // Diger 4 level sonraki PR'da eklenecek
 ];
 
 export const RESCUE_CARDS = [
     { id: 'cat_01', name: 'Sokak Kedisi', rarity: 'common' as const },
-    { id: 'dog_01', name: 'Köpek', rarity: 'common' as const },
-    { id: 'bird_01', name: 'Kuş', rarity: 'rare' as const },
+    { id: 'dog_01', name: 'Kopek', rarity: 'common' as const },
+    { id: 'bird_01', name: 'Kus', rarity: 'rare' as const },
 ];

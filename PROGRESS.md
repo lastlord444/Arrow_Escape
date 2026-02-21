@@ -5,7 +5,7 @@
 | 10 | Repo bootstrap + AGENTS.md + PROGRESS.md + copilot instructions | feature/bootstrap | - | ✅ npm dev/build/test çalışır |
 | 5 | Bootstrap fix: base path, pnpm sil, PR template, CI | feature/bootstrap-fix | - | ✅ CI workflow aktif |
 | 10 | Skills kurulumu + SKILLS_TR.md + skills-tr/ | feature/skills-tr | - | Türkçe skill dokümanları var |
-| 25 | Game Core: 6x6 grid + arrow move + win condition + level loader | feature/engine-core | - | ✅ Grid, move, win, level loader, tests |
+| 25 | Game Core: 6x6 grid + arrow move + win condition + level loader | feature/engine-core | - | ✅ Grid, move, win, level loader, 1 valid level |
 | 15 | Level pipeline: 5 level JSON + loader entegrasyonu | feature/levels | - | level değiştirilebilir |
 | 10 | Win condition + fail state + undo | feature/rules | - | unit test var |
 | 10 | Rescue UI: win modal + albüm(localStorage) | feature/album | - | UI bozulmadan |
