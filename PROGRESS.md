@@ -22,3 +22,4 @@
   - Dosya yapısı kuruldu (game, telegram, storage, content, tests)
   - Kritik düzeltmeler: base path env, pnpm kaldırıldı, PR template, CI workflow
 - 2025-02-21: npm test ✅ + npm run build ✅
+  
