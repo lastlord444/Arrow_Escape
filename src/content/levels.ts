@@ -2,86 +2,53 @@
  * Content Module - Level Data ve Rescue Cards
  */
 
-import type { GridCell } from '../game';
+import type { LevelDefinition } from '../game';
 
 export interface Level {
     id: number;
     name: string;
-    grid: GridCell[][];
+    levelDef: LevelDefinition;
     animalId: string;
     targetMoves?: number;
 }
 
 /**
- * 5 Örnek Level (MVP0)
+ * Level (MVP0)
  * Grid sembolleri:
- * - .: boş
- * - ↑↓←→: oklar
+ * - .: bos
+ * - ^: ok (yukari)
+ * - v: ok (asagi)
+ * - <: ok (sol)
+ * - >: ok (sag)
  * - A: hayvan (animal)
- * - E: çıkış (exit)
+ * - E: cikis (exit)
+ *
+ * Her satir tam 6 karakter olmali!
  */
 export const LEVELS: Level[] = [
     {
         id: 1,
-        name: 'İlk Kurtuluş',
+        name: 'Ilk Kurtulus',
         animalId: 'cat_01',
-        grid: [
-            [
-                { type: 'arrow', direction: 'right' },
-                { type: 'empty' },
-                { type: 'empty' },
-                { type: 'empty' },
-                { type: 'empty' },
-                { type: 'empty' },
+        levelDef: {
+            id: 'level-1',
+            grid: [
+                '>.....',
+                '..v...',
+                'A.>...',
+                '......',
+                '....E.',
+                '......',
             ],
-            [
-                { type: 'empty' },
-                { type: 'empty' },
-                { type: 'arrow', direction: 'down' },
-                { type: 'empty' },
-                { type: 'empty' },
-                { type: 'empty' },
-            ],
-            [
-                { type: 'animal', animalId: 'cat_01' },
-                { type: 'empty' },
-                { type: 'arrow', direction: 'right' },
-                { type: 'empty' },
-                { type: 'empty' },
-                { type: 'empty' },
-            ],
-            [
-                { type: 'empty' },
-                { type: 'empty' },
-                { type: 'empty' },
-                { type: 'empty' },
-                { type: 'empty' },
-                { type: 'empty' },
-            ],
-            [
-                { type: 'empty' },
-                { type: 'empty' },
-                { type: 'empty' },
-                { type: 'empty' },
-                { type: 'exit' },
-                { type: 'empty' },
-            ],
-            [
-                { type: 'empty' },
-                { type: 'empty' },
-                { type: 'empty' },
-                { type: 'empty' },
-                { type: 'empty' },
-                { type: 'empty' },
-            ],
-        ],
+            meta: { name: 'Ilk Kurtulus' },
+        },
         targetMoves: 5,
     },
-    // Diğer 4 level sonraki PR'da eklenecek
+    // Diger 4 level sonraki PR'da eklenecek
 ];
 
-export const RESUCE_CARDS = [
+export const RESCUE_CARDS = [
     { id: 'cat_01', name: 'Sokak Kedisi', rarity: 'common' as const },
-    { id: 'dog_01', name: 'Köpek', rarity: 'common' as const },
-    { id: 'bird_01', name: 'Kuş', rarity: 'rare' as const },
+    { id: 'dog_01', name: 'Kopek', rarity: 'common' as const },
+    { id: 'bird_01', name: 'Kus', rarity: 'rare' as const },
 ];
