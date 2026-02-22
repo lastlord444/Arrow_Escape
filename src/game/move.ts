@@ -1,6 +1,6 @@
 /** Arrow Escape - Ok Hareket Mantığı */
 
-import type { GameState, Position, ArrowDirection } from './types';
+import type { GameState, Position, ArrowDirection, SlideResult } from './types';
 import { cloneGrid, inBounds } from './grid';
 import { checkWin } from './rules';
 
@@ -74,4 +74,82 @@ export function tryMoveArrow(state: GameState, from: Position): GameState {
 
     // Hedef animal veya arrow ise hareket yok
     return state;
+}
+
+/**
+ * Oku kaydır (multi-cell slide, video hissi).
+ * Ok kendi yönünde boş hücreler boyunca gider.
+ * - Exit'e girerse silinir.
+ * - Out-of-bounds'a çıkarsa silinir.
+ * - Animal/arrow'a çarparsa son boşta durur.
+ * - moves++ sadece hareket olursa.
+ */
+export function trySlideArrow(state: GameState, from: Position): SlideResult {
+    const grid = cloneGrid(state.grid);
+    const cell = grid[from.row][from.col];
+
+    // Ok değilse hareket yok
+    if (cell.type !== 'arrow' || !cell.direction) {
+        return { state, path: [], removed: false };
+    }
+
+    const delta = DIRECTION_DELTAS[cell.direction];
+    const path: Position[] = [from];
+    let current = from;
+    let removed = false;
+
+    while (true) {
+        const next: Position = {
+            row: current.row + delta.row,
+            col: current.col + delta.col,
+        };
+
+        // Out-of-bounds → silinir
+        if (!inBounds(next)) {
+            grid[from.row][from.col] = { type: 'empty' };
+            removed = true;
+            break;
+        }
+
+        const nextCell = grid[next.row][next.col];
+
+        // Exit → silinir
+        if (nextCell.type === 'exit') {
+            grid[from.row][from.col] = { type: 'empty' };
+            path.push(next);
+            removed = true;
+            break;
+        }
+
+        // Empty → devam et
+        if (nextCell.type === 'empty') {
+            path.push(next);
+            current = next;
+            continue;
+        }
+
+        // Animal veya arrow → dur
+        break;
+    }
+
+    // Hareket varsa oku son pozisyona taşı
+    const moved = removed || path.length > 1;
+
+    if (moved) {
+        const last = path[path.length - 1];
+        // Eğer removed ise (exit/out-of-bounds), from'u boşalttık zaten
+        // Değilse, oku son konuma taşı
+        if (!removed) {
+            grid[last.row][last.col] = { ...cell };
+            grid[from.row][from.col] = { type: 'empty' };
+        }
+    }
+
+    const newState: GameState = {
+        grid,
+        moves: moved ? state.moves + 1 : state.moves,
+        isWon: checkWin(grid),
+    };
+
+    return { state: newState, path, removed };
 }

@@ -25,6 +25,20 @@ export interface GameState {
     isWon: boolean;
 }
 
+/** Slide hareketi sonucu */
+export interface SlideResult {
+    state: GameState;
+    path: Position[];      // Okun geçtiği hücreler (animasyon için)
+    removed: boolean;      // Exit/out-of-bounds nedeniyle silindi mi?
+}
+
+/** Hayvanın kurtarma koşusu için path */
+export interface AnimalRunPath {
+    animalStart: Position;
+    exitPos: Position;
+    path: Position[];      // Animal'dan Exit'e düz çizgi
+}
+
 /** Level tanımı (JSON formatı) */
 export interface LevelDefinition {
     id: string;

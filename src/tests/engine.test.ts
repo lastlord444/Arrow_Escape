@@ -13,7 +13,7 @@ const _move = await import('../game/move');
 const { GRID_SIZE } = _grid;
 const { parseLevel } = _level;
 const { checkWin } = _rules;
-const { tryMoveArrow } = _move;
+const { tryMoveArrow, trySlideArrow } = _move;
 import type { Position } from '../game/types';
 
 describe('Grid Size', () => {
@@ -175,5 +175,127 @@ describe('Arrow Move', () => {
         const result = tryMoveArrow(state, from);
         expect(result.grid[0][5].type).toBe('empty');
         expect(result.moves).toBe(1);
+    });
+});
+
+describe('Arrow Slide (Video Flow)', () => {
+    it('slides through empty cells until blocked', () => {
+        const state = {
+            grid: parseLevel({
+                id: 'test',
+                grid: [
+                    '>....>',
+                    'A.....',
+                    '......',
+                    '......',
+                    '......',
+                    '.....E',
+                ],
+            }),
+            moves: 0,
+            isWon: false,
+        };
+        const from: Position = { row: 0, col: 0 };
+        const result = trySlideArrow(state, from);
+        // Ok boş hücreler boyunca gider
+        expect(result.path.length).toBeGreaterThan(1);
+        expect(result.state.grid[0][0].type).toBe('empty');
+        // Son hücrede arrow durur
+        expect(result.removed).toBe(false);
+        // 1 gesture = 1 move
+        expect(result.state.moves).toBe(1);
+    });
+
+    it('slides into exit and gets removed', () => {
+        const state = {
+            grid: parseLevel({
+                id: 'test',
+                grid: [
+                    '...>E.',
+                    'A.....',
+                    '......',
+                    '......',
+                    '......',
+                    '......',
+                ],
+            }),
+            moves: 0,
+            isWon: false,
+        };
+        const from: Position = { row: 0, col: 3 };
+        const result = trySlideArrow(state, from);
+        expect(result.removed).toBe(true);
+        expect(result.state.grid[0][3].type).toBe('empty');
+        expect(result.state.moves).toBe(1);
+    });
+
+    it('stops at arrow block', () => {
+        const state = {
+            grid: parseLevel({
+                id: 'test',
+                grid: [
+                    '..>.v.',
+                    'A.....',
+                    '......',
+                    '......',
+                    '......',
+                    '.....E',
+                ],
+            }),
+            moves: 0,
+            isWon: false,
+        };
+        const from: Position = { row: 0, col: 2 };
+        const result = trySlideArrow(state, from);
+        // Ok başka okun önünde durur
+        expect(result.removed).toBe(false);
+        expect(result.state.moves).toBe(1);
+    });
+
+    it('stops at animal block (no movement, same as video)', () => {
+        const state = {
+            grid: parseLevel({
+                id: 'test',
+                grid: [
+                    '>A....',
+                    '......',
+                    '......',
+                    '......',
+                    '......',
+                    '.....E',
+                ],
+            }),
+            moves: 0,
+            isWon: false,
+        };
+        const from: Position = { row: 0, col: 0 };
+        const result = trySlideArrow(state, from);
+        // Hemen yanında animal → hareket yok
+        expect(result.path.length).toBe(1); // only start
+        expect(result.removed).toBe(false);
+        expect(result.state.moves).toBe(0); // NO movement
+    });
+
+    it('out-of-bounds removes arrow', () => {
+        const state = {
+            grid: parseLevel({
+                id: 'test',
+                grid: [
+                    '.....>',
+                    'A.....',
+                    '......',
+                    '......',
+                    '......',
+                    '.....E',
+                ],
+            }),
+            moves: 0,
+            isWon: false,
+        };
+        const from: Position = { row: 0, col: 5 };
+        const result = trySlideArrow(state, from);
+        expect(result.removed).toBe(true);
+        expect(result.state.grid[0][5].type).toBe('empty');
+        expect(result.state.moves).toBe(1);
     });
 });

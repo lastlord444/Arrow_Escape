@@ -1,13 +1,14 @@
-/** Arrow Escape - Phaser Scene (Smooth Animations + Neon Style) */
+/** Arrow Escape - Phaser Scene (Video Flow: Slide + Click + Rescue Animation) */
 
 import Phaser from 'phaser';
 import type { LevelDefinition } from '../types';
 import { GRID_SIZE } from '../grid';
-import type { GridCell, Position } from '../types';
-import { tryMoveArrow } from '../move';
+import type { GridCell, Position, SlideResult } from '../types';
+import { trySlideArrow } from '../move';
 import { checkWin } from '../rules';
 
 const CELL_SIZE_BASE = 60; // Base cell size, scale edilecek
+const CLICK_THRESHOLD = 12; // px below = click, above = drag
 
 export class ArrowEscapeScene extends Phaser.Scene {
     private grid: GridCell[][] = [];
@@ -18,6 +19,7 @@ export class ArrowEscapeScene extends Phaser.Scene {
     private selectedArrow: Position | null = null;
     private arrowContainers: Map<string, any> = new Map();
     private startDragPos: Phaser.Math.Vector2 | null = null;
+    private levelId: string = '';
 
     constructor() {
         super({ key: 'ArrowEscape' });
@@ -28,6 +30,7 @@ export class ArrowEscapeScene extends Phaser.Scene {
         this.grid = this.parseLevel(data.level.grid);
         this.moves = 0;
         this.isWonValue = false;
+        this.levelId = data.level.id;
 
         // Responsive cell size hesapla
         const viewportW = this.scale.width;
@@ -181,36 +184,32 @@ export class ArrowEscapeScene extends Phaser.Scene {
         const { x, y } = pointer;
         const distance = Phaser.Math.Distance.Between(x, y, this.startDragPos.x, this.startDragPos.y);
 
-        // Threshold: 20px
-        if (distance < 20) return;
-
-        const direction = this.getDragDirection(x, y);
-        if (!direction) return;
-
-        const from = this.selectedArrow;
-        const cell = this.grid[from.row][from.col];
-        if (cell.type !== 'arrow') return;
-
-        const result = tryMoveArrow({ grid: this.grid, moves: this.moves, isWon: false }, from);
-
-        if (result.moves > this.moves) {
-            // Valid move - animasyonla güncelle
-            this.moves = result.moves;
-            this.grid = result.grid;
-            this.animateMove(from, result);
+        // Drag threshold check
+        if (distance >= CLICK_THRESHOLD * 2) {
+            // Intentional drag - check direction match
+            const dragDir = this.getDragDirection(x, y);
+            const cell = this.grid[this.selectedArrow.row][this.selectedArrow.col];
+            if (cell.type === 'arrow' && cell.direction === dragDir) {
+                this.applySlide(this.selectedArrow);
+            } else {
+                this.invalidMove(this.selectedArrow);
+            }
+            this.selectedArrow = null;
+            this.startDragPos = null;
         }
-
-        // Reset selection
-        this.selectedArrow = null;
-        this.startDragPos = null;
-
-        // Re-render
-        this.time.delayedCall(200, () => {
-            this.createCells();
-        });
     }
 
-    private onPointerUp() {
+    private onPointerUp(pointer: Phaser.Input.Pointer) {
+        if (!this.selectedArrow || !this.startDragPos) return;
+
+        const { x, y } = pointer;
+        const distance = Phaser.Math.Distance.Between(x, y, this.startDragPos.x, this.startDragPos.y);
+
+        // Click (short distance) → slide automatically
+        if (distance < CLICK_THRESHOLD) {
+            this.applySlide(this.selectedArrow);
+        }
+
         this.selectedArrow = null;
         this.startDragPos = null;
     }
@@ -233,65 +232,175 @@ export class ArrowEscapeScene extends Phaser.Scene {
         }
     }
 
-    private animateMove(
-        from: Position,
-        result: { grid: GridCell[][]; moves: number; isWon: boolean }
-    ) {
+    private applySlide(from: Position) {
+        const currentState = { grid: this.grid, moves: this.moves, isWon: false };
+        const result: SlideResult = trySlideArrow(currentState, from);
+
+        // No movement
+        if (result.path.length <= 1) {
+            this.invalidMove(from);
+            return;
+        }
+
+        // Update state
+        this.moves = result.state.moves;
+        this.grid = result.state.grid;
+
+        // Animate slide
+        this.animateSlide(from, result);
+    }
+
+    private invalidMove(from: Position) {
+        const container = this.arrowContainers.get(`${from.row},${from.col}`);
+        if (!container) return;
+        // Shake effect
+        this.tweens.add({
+            targets: container,
+            x: container.x + 5,
+            duration: 50,
+            yoyo: true,
+            repeat: 3,
+            onComplete: () => {
+                container.x = this.gridOffset.col + from.col * this.cellSize + this.cellSize / 2;
+            },
+        });
+        // Haptic (Telegram varsa)
+        const tg = (window as any).Telegram?.WebApp;
+        if (tg?.HapticFeedback?.notificationOccurred) {
+            tg.HapticFeedback.notificationOccurred('error');
+        }
+    }
+
+    private animateSlide(from: Position, result: SlideResult) {
         const container = this.arrowContainers.get(`${from.row},${from.col}`);
         if (!container) return;
 
-        // Hedef pozisyon hesapla (move sonrası)
-        const arrowDir = (result.grid[from.row][from.col] as any).direction;
-        const targetPos = this.getTargetPosition(from.row, from.col, arrowDir);
+        const path = result.path;
+        if (path.length === 0) return;
 
-        if (targetPos) {
-            // Move tween
+        // Last position (where arrow ends up or disappears)
+        const lastPos = path[path.length - 1];
+
+        if (result.removed) {
+            // Exit/out-of-bounds: slide to last then fade out
+            const targetX = this.gridOffset.col + lastPos.col * this.cellSize + this.cellSize / 2;
+            const targetY = this.gridOffset.row + lastPos.row * this.cellSize + this.cellSize / 2;
+
             this.tweens.add({
                 targets: container,
-                x: targetPos.x,
-                y: targetPos.y,
+                x: targetX,
+                y: targetY,
                 duration: 150,
                 ease: Phaser.Math.Easing.Quadratic.Out,
+                onComplete: () => {
+                    // Fade out
+                    this.tweens.add({
+                        targets: container,
+                        scaleX: 0,
+                        scaleY: 0,
+                        alpha: 0,
+                        duration: 100,
+                        ease: Phaser.Math.Easing.Back.In,
+                        onComplete: () => {
+                            container.destroy();
+                            this.checkWinAndEmit();
+                        },
+                    });
+                },
             });
         } else {
-            // Remove (exit/out-of-bounds) - fade out
+            // Stay on board: slide to final position
+            const targetX = this.gridOffset.col + lastPos.col * this.cellSize + this.cellSize / 2;
+            const targetY = this.gridOffset.row + lastPos.row * this.cellSize + this.cellSize / 2;
+
             this.tweens.add({
                 targets: container,
-                scaleX: 0,
-                scaleY: 0,
-                alpha: 0,
-                duration: 120,
-                ease: Phaser.Math.Easing.Back.In,
-                onComplete: () => container.destroy(),
+                x: targetX,
+                y: targetY,
+                duration: 180,
+                ease: Phaser.Math.Easing.Quadratic.Out,
+                onComplete: () => {
+                    this.checkWinAndEmit();
+                },
             });
         }
     }
 
-    private getTargetPosition(row: number, col: number, direction: string): { x: number; y: number } | null {
-        let dr = 0, dc = 0;
-        if (direction === 'up') dr = -1;
-        else if (direction === 'down') dr = 1;
-        else if (direction === 'left') dc = -1;
-        else if (direction === 'right') dc = 1;
+    private checkWinAndEmit() {
+        const won = checkWin(this.grid);
+        if (won && !this.isWonValue) {
+            this.isWonValue = true;
 
-        const newRow = row + dr;
-        const newCol = col + dc;
-
-        if (newRow < 0 || newRow >= GRID_SIZE || newCol < 0 || newCol >= GRID_SIZE) return null;
-
-        return {
-            x: this.gridOffset.col + newCol * this.cellSize + this.cellSize / 2,
-            y: this.gridOffset.row + newRow * this.cellSize + this.cellSize / 2,
-        };
+            // Rescue animation first
+            this.playRescueAnimation(() => {
+                // Then emit WIN event
+                this.game.events.emit('WIN', { levelId: this.levelId, moves: this.moves });
+                this.registry.set('state', {
+                    get moves() { return this.moves; },
+                    get isWon() { return true; },
+                });
+            });
+        }
     }
 
+    private playRescueAnimation(onComplete: () => void) {
+        // Find animal and exit positions
+        let animalPos: Position | null = null;
+        let exitPos: Position | null = null;
+
+        for (let r = 0; r < GRID_SIZE; r++) {
+            for (let c = 0; c < GRID_SIZE; c++) {
+                const cell = this.grid[r][c];
+                if (cell.type === 'animal') animalPos = { row: r, col: c };
+                if (cell.type === 'exit') exitPos = { row: r, col: c };
+            }
+        }
+
+        if (!animalPos || !exitPos) {
+            onComplete();
+            return;
+        }
+
+        const animalCont = this.arrowContainers.get(`${animalPos.row},${animalPos.col}`);
+        if (!animalCont) {
+            onComplete();
+            return;
+        }
+
+        const endX = this.gridOffset.col + exitPos.col * this.cellSize + this.cellSize / 2;
+        const endY = this.gridOffset.row + exitPos.row * this.cellSize + this.cellSize / 2;
+
+        // Straight line tween
+        this.tweens.add({
+            targets: animalCont,
+            x: endX,
+            y: endY,
+            duration: 300,
+            ease: Phaser.Math.Easing.Quadratic.InOut,
+            onComplete: () => {
+                // Sparkle at exit
+                const sparkle = this.add.text(endX, endY, '✨', { fontSize: this.cellSize * 0.8 });
+                sparkle.setOrigin(0.5);
+                this.tweens.add({
+                    targets: sparkle,
+                    scale: 1.5,
+                    alpha: 0,
+                    duration: 200,
+                    onComplete: () => {
+                        sparkle.destroy();
+                        onComplete();
+                    },
+                });
+            },
+        });
+    }
+
+    // Win check loop kept for safety (won't fire if already won)
     private checkWinLoop() {
         if (this.isWonValue) return;
-
         const won = checkWin(this.grid);
         if (won) {
             this.isWonValue = true;
-            // Update registry state
             this.registry.set('state', {
                 get moves() { return this.moves; },
                 get isWon() { return true; },

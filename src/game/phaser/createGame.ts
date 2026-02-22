@@ -9,10 +9,17 @@ import type { LevelDefinition } from '../types';
  * @param domParent DOM elementi (Phaser canvas'ı buraya yerleşir)
  * @param level Level tanımı
  */
+export interface CreateGameResult {
+    game: Phaser.Game;
+    renderer: 'webgl' | 'canvas';
+}
+
+export type PhaserGame = Phaser.Game; // Legacy compatibility
+
 export function createArrowEscapeGame(
     domParent: HTMLElement,
     level: LevelDefinition
-): Phaser.Game {
+): CreateGameResult {
     const parentWidth = domParent.clientWidth || 360;
     const parentHeight = domParent.clientHeight || 640;
 
@@ -29,12 +36,21 @@ export function createArrowEscapeGame(
         scene: ArrowEscapeScene,
     };
 
-    const game = new Phaser.Game(config);
+    let game: Phaser.Game;
+    try {
+        game = new Phaser.Game(config);
+    } catch (e) {
+        // WebGL failed, fallback to Canvas
+        console.warn('WebGL not supported, falling back to Canvas', e);
+        config.type = Phaser.CANVAS;
+        game = new Phaser.Game(config);
+    }
 
     // Level'ı scene'e geçir
     game.scene.start('ArrowEscape', { level });
 
-    return game;
-}
+    // Detect renderer type (immediate fallback if events not ready)
+    const detectedRenderer = game.renderer?.type === Phaser.WEBGL ? 'webgl' : 'canvas';
 
-export type PhaserGame = Phaser.Game;
+    return { game, renderer: detectedRenderer };
+}
