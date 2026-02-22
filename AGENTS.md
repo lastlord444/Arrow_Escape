@@ -3,7 +3,7 @@ Bu dosya bu projenin TEK GERÇEĞİDİR (single source of truth).
 Her görev öncesi önce bunu oku, sonra 5 maddede özetle ve ancak sonra kod yaz.
 
 ## 0) Ürün kararı (kilit)
-- Çekirdek mekanik: Arrow Escape (grid tabanlı).
+- Çekirdek mekanik: **Arrow Out** - 1×N blok oklar, slide until exit, clear board to win.
 - Tema/meta: Animal Rescue (kurtarma kartları + albüm).
 - Platform: Telegram Mini App (web-native).
 - Unity WebGL YASAK (MVP'de yok).
@@ -18,10 +18,11 @@ Her görev öncesi önce bunu oku, sonra 5 maddede özetle ve ancak sonra kod ya
 ## 2) Scope (MVP0 / MVP1)
 ### MVP0 (5 level dikey dilim)
 - 6x6 grid
-- Oklar sadece yönünde hareket eder; çıkıştan çıkan ok board'dan silinir.
-- Win koşulu: "Hayvan ile çıkış aynı satır/sütun ve arada ok yok."
-- 5 örnek level JSON
-- Win ekranı: "Kurtarıldı!" + 1 kart albüme ekle (localStorage)
+- **Arrow Blocks**: 1×N boyutunda bloklar (len=1..6), kendi yönünde slide.
+- **Exit**: Grid kenarları exit (top/bottom/left/right). Blok edge'den çıkarsa tamamen silinir.
+- **Win koşulu**: Tüm bloklar board'dan silindiğinde WIN.
+- 5 örnek level JSON (yeni format)
+- Win ekranı: "Clear!" + 1 kart albüme ekle (localStorage)
 - Share butonu (Telegram içinde link ile paylaşım)
 
 ### MVP1 (30 level + daily)
@@ -31,7 +32,7 @@ Her görev öncesi önce bunu oku, sonra 5 maddede özetle ve ancak sonra kod ya
 - Monetization sadece STUB: Rewarded buton yeri + Stars ürün taslağı (gerçek entegrasyon yok)
 
 ## 3) Win Condition (kilit)
-- "Hayvan ile çıkış aynı satır veya sütunda ve arada hiç ok kalmadıysa WIN."
+**"Tüm arrow blokları board'dan çıkarıldı (blocks.length === 0)"**
 
 ## 4) Regression Guard Contract (bir yeri yapıp bozma)
 ZORUNLU:
@@ -67,7 +68,7 @@ ZORUNLU:
 - npm run build
 
 ## 7) "Yapılmayacaklar" listesi (MVP'de yasak)
-- Yeni mekanik icadı (pin/fizik/merge/idle/RT multiplayer).
+- **Arrow Out mekanik dışında** yeni mekanik icadı (pin/fizik/merge/idle/RT multiplayer).
 - Büyük asset pack, büyük ses dosyaları, gereksiz UI animasyonları.
 - Popunder / agresif reklam formatları.
 - Kripto/P2E ödül havuzu.

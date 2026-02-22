@@ -1,11 +1,10 @@
-/** Arrow Escape - Ok Hareket Mantığı */
+/** Arrow Escape - Slide Logic (Arrow Out) */
 
-import type { GameState, Position, ArrowDirection } from './types';
-import { cloneGrid, inBounds } from './grid';
+import type { GameState, ArrowBlock, SlideResult, Position } from './types';
 import { checkWin } from './rules';
+import { inBounds, getOccupiedCells } from './grid';
 
-/** Arrow yönüne göre pozisyon değişikliği */
-const DIRECTION_DELTAS: Record<ArrowDirection, Position> = {
+const DIR_DELTAS: Record<ArrowBlock['dir'], Position> = {
     up: { row: -1, col: 0 },
     down: { row: 1, col: 0 },
     left: { row: 0, col: -1 },
@@ -13,65 +12,55 @@ const DIRECTION_DELTAS: Record<ArrowDirection, Position> = {
 };
 
 /**
- * Oku hareket ettirmeye çalış.
- * KURALLAR:
- * - Seçilen hücre arrow değilse state değişmeden döner.
- * - Ok sadece kendi yönünde hareket edebilir.
- * - 1 adım: hedef hücre empty ise swap.
- * - Hedef hücre exit ise arrow silinir (from empty olur, exit kalır).
- * - Hedef hücre animal veya arrow ise hareket yok.
- * - Out-of-bounds'a doğru hareket ediyorsa arrow silinir.
+ * Bloğu kaydır (slide until blocked/exit).
+ * - Blok yönünde gider.
+ * - Başka blok veya grid kenarı varsa durur.
+ * - Grid kenarından tamamen çıkarsa silinir.
  * - moves++ sadece hareket olursa.
- * - Her move sonrası isWon = checkWin(grid)
  */
-export function tryMoveArrow(state: GameState, from: Position): GameState {
-    const grid = cloneGrid(state.grid);
-    const cell = grid[from.row][from.col];
+export function slideBlock(state: GameState, blockId: string): SlideResult {
+    const block = state.blocks.find(b => b.id === blockId);
+    if (!block) return { state, removed: false };
 
-    // Ok değilse hareket yok
-    if (cell.type !== 'arrow' || !cell.direction) {
-        return state;
+    // Hedef pozisyon hesapla (1 adım)
+    const delta = DIR_DELTAS[block.dir];
+    const targetRow = block.row + delta.row;
+    const targetCol = block.col + delta.col;
+
+    // Out-of-bounds kontrolü (tüm blok için)
+    const cells = getOccupiedCells(block);
+    const allOutOfBounds = cells.every(c => !inBounds({ ...c, row: c.row + delta.row, col: c.col + delta.col }));
+
+    if (allOutOfBounds) {
+        // Tamamen çıkar, sil
+        const newBlocks = state.blocks.filter(b => b.id !== blockId);
+        const newState: GameState = {
+            blocks: newBlocks,
+            moves: state.moves + 1,
+            isWon: checkWin({ blocks: newBlocks, moves: state.moves + 1, isWon: false }),
+        };
+        return { state: newState, removed: true };
     }
 
-    const delta = DIRECTION_DELTAS[cell.direction];
-    const target: Position = {
-        row: from.row + delta.row,
-        col: from.col + delta.col,
+    // Başka blokla çakışma kontrolü
+    const movedBlock: ArrowBlock = { ...block, row: targetRow, col: targetCol };
+    const collides = state.blocks.some(b => b.id !== blockId && (
+        (b.row === targetRow && b.col === targetCol) ||
+        getOccupiedCells(movedBlock).some(c =>
+            getOccupiedCells(b).some(cb => c.row === cb.row && c.col === cb.col)
+        )
+    ));
+
+    if (collides) {
+        return { state, removed: false };
+    }
+
+    // Hareket et
+    const newBlocks = state.blocks.map(b => b.id === blockId ? movedBlock : b);
+    const newState: GameState = {
+        blocks: newBlocks,
+        moves: state.moves + 1,
+        isWon: checkWin({ blocks: newBlocks, moves: state.moves + 1, isWon: false }),
     };
-
-    // Out-of-bounds → ok silinir
-    if (!inBounds(target)) {
-        grid[from.row][from.col] = { type: 'empty' };
-        return {
-            grid,
-            moves: state.moves + 1,
-            isWon: checkWin(grid),
-        };
-    }
-
-    const targetCell = grid[target.row][target.col];
-
-    // Hedef empty ise swap
-    if (targetCell.type === 'empty') {
-        grid[target.row][target.col] = { ...cell };
-        grid[from.row][from.col] = { type: 'empty' };
-        return {
-            grid,
-            moves: state.moves + 1,
-            isWon: checkWin(grid),
-        };
-    }
-
-    // Hedef exit ise ok silinir (exit kalır)
-    if (targetCell.type === 'exit') {
-        grid[from.row][from.col] = { type: 'empty' };
-        return {
-            grid,
-            moves: state.moves + 1,
-            isWon: checkWin(grid),
-        };
-    }
-
-    // Hedef animal veya arrow ise hareket yok
-    return state;
+    return { state: newState, removed: false };
 }

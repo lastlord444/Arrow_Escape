@@ -1,41 +1,41 @@
-/** Arrow Escape - Phaser Scene (Smooth Animations + Neon Style) */
+/** Arrow Escape - Phaser Scene (Arrow Out: 1×N Blocks) */
 
 import Phaser from 'phaser';
-import type { LevelDefinition } from '../types';
+import type { LevelDefinition, ArrowBlock, GameState, ArrowDirection, SlideResult } from '../types';
 import { GRID_SIZE } from '../grid';
-import type { GridCell, Position } from '../types';
-import { tryMoveArrow } from '../move';
+import { slideBlock } from '../move';
 import { checkWin } from '../rules';
 
-const CELL_SIZE_BASE = 60; // Base cell size, scale edilecek
+const CELL_SIZE_BASE = 60;
 
 export class ArrowEscapeScene extends Phaser.Scene {
-    private grid: GridCell[][] = [];
+    private blocks: ArrowBlock[] = [];
     private moves = 0;
     private isWonValue = false;
     private cellSize = CELL_SIZE_BASE;
-    private gridOffset: Position = { row: 0, col: 0 };
-    private selectedArrow: Position | null = null;
-    private arrowContainers: Map<string, any> = new Map();
+    private gridOffset: { row: number; col: number } = { row: 0, col: 0 };
+    private selectedBlock: ArrowBlock | null = null;
+    private blockContainers: Map<string, Phaser.GameObjects.Container> = new Map();
     private startDragPos: Phaser.Math.Vector2 | null = null;
+    private levelId: string = '';
 
     constructor() {
         super({ key: 'ArrowEscape' });
     }
 
     create(data: { level: LevelDefinition }) {
-        // Grid'i parse et
-        this.grid = this.parseLevel(data.level.grid);
+        this.levelId = data.level.id;
+        this.blocks = [...data.level.blocks];
         this.moves = 0;
         this.isWonValue = false;
 
-        // Responsive cell size hesapla
+        // Responsive cell size
         const viewportW = this.scale.width;
         const viewportH = this.scale.height;
-        const availableH = viewportH - 110; // HUD (50) + PowerBar (60)
+        const availableH = viewportH - 110;
         this.cellSize = Math.min(viewportW, availableH) / GRID_SIZE;
 
-        // Grid ortala
+        // Center grid
         const gridPixelW = this.cellSize * GRID_SIZE;
         const gridPixelH = this.cellSize * GRID_SIZE;
         this.gridOffset = {
@@ -43,57 +43,23 @@ export class ArrowEscapeScene extends Phaser.Scene {
             col: Math.floor((viewportW - gridPixelW) / 2),
         };
 
-        // Grid background çiz (dotted pattern)
         this.drawGridBackground();
-
-        // Hücreleri oluştur
-        this.createCells();
-
-        // Input setup
+        this.createBlocks();
         this.setupInput();
-
-        // Win check loop
-        this.time.addEvent({
-            delay: 500,
-            callback: this.checkWinLoop,
-            callbackScope: this,
-            loop: true,
-        });
-
-        // Expose state for React
-        this.registry.set('state', {
-            get moves() { return this.moves; },
-            get isWon() { return this.isWonValue; },
-        });
-    }
-
-    private parseLevel(grid: string[]): GridCell[][] {
-        return grid.map(row => row.split('').map(this.charToCell));
-    }
-
-    private charToCell(char: string): GridCell {
-        switch (char) {
-            case '.': return { type: 'empty' };
-            case '^': return { type: 'arrow', direction: 'up' };
-            case 'v': return { type: 'arrow', direction: 'down' };
-            case '<': return { type: 'arrow', direction: 'left' };
-            case '>': return { type: 'arrow', direction: 'right' };
-            case 'A': return { type: 'animal' };
-            case 'E': return { type: 'exit' };
-            default: return { type: 'empty' };
-        }
     }
 
     private drawGridBackground() {
         const graphics = this.add.graphics();
-        const darkNavy = 0x1a1f36;
-        const lighterDot = 0x3b4d66;
-
-        graphics.fillStyle(darkNavy, 1);
-        graphics.fillRect(this.gridOffset.col, this.gridOffset.row, this.cellSize * GRID_SIZE, this.cellSize * GRID_SIZE);
+        graphics.fillStyle(0x1a1f36, 1);
+        graphics.fillRect(
+            this.gridOffset.col,
+            this.gridOffset.row,
+            this.cellSize * GRID_SIZE,
+            this.cellSize * GRID_SIZE
+        );
 
         // Dotted pattern
-        graphics.fillStyle(lighterDot, 0.3);
+        graphics.fillStyle(0x3b4d66, 0.3);
         for (let r = 0; r < GRID_SIZE; r++) {
             for (let c = 0; c < GRID_SIZE; c++) {
                 graphics.fillCircle(
@@ -105,50 +71,68 @@ export class ArrowEscapeScene extends Phaser.Scene {
         }
     }
 
-    private createCells() {
-        this.arrowContainers.clear();
+    private createBlocks() {
+        this.blockContainers.clear();
 
-        for (let r = 0; r < GRID_SIZE; r++) {
-            for (let c = 0; c < GRID_SIZE; c++) {
-                const cell = this.grid[r][c];
-                if (cell.type === 'empty') continue;
-
-                const x = this.gridOffset.col + c * this.cellSize + this.cellSize / 2;
-                const y = this.gridOffset.row + r * this.cellSize + this.cellSize / 2;
-                const container = this.add.container(x, y);
-
-                // Background rounded rect
-                const bg = this.add.rectangle(0, 0, this.cellSize - 4, this.cellSize - 4, 0x2d3748);
-                bg.setStrokeStyle(2, 0x4a5568);
-                container.add(bg);
-
-                // Icon/content
-                if (cell.type === 'arrow') {
-                    const arrow = this.createArrowSprite(cell.direction as any);
-                    container.add(arrow);
-                } else if (cell.type === 'animal') {
-                    const text = this.add.text(0, 0, '🐱', { fontSize: this.cellSize * 0.6 });
-                    text.setOrigin(0.5);
-                    container.add(text);
-                } else if (cell.type === 'exit') {
-                    const text = this.add.text(0, 0, '🚪', { fontSize: this.cellSize * 0.6 });
-                    text.setOrigin(0.5);
-                    container.add(text);
-                }
-
-                container.setData('row', r);
-                container.setData('col', c);
-                container.setData('type', cell.type);
-                container.setData('direction', cell.direction);
-
-                this.arrowContainers.set(`${r},${c}`, container);
-            }
+        for (const block of this.blocks) {
+            const container = this.createBlockContainer(block);
+            this.blockContainers.set(block.id, container);
         }
     }
 
-    private createArrowSprite(direction: 'up' | 'down' | 'left' | 'right'): Phaser.GameObjects.Text {
-        const arrows: Record<string, string> = { up: '↑', down: '↓', left: '←', right: '→' };
-        return this.add.text(0, 0, arrows[direction], {
+    private createBlockContainer(block: ArrowBlock): Phaser.GameObjects.Container {
+        const { width, height } = this.getBlockDimensions(block);
+        const { x, y } = this.getBlockPixelPosition(block);
+
+        const container = this.add.container(x, y);
+
+        // Background (long rectangle)
+        const bg = this.add.rectangle(0, 0, width, height, 0x2d3748);
+        bg.setStrokeStyle(2, 0x00d4ff);
+        container.add(bg);
+
+        // Arrow indicator at head
+        const arrow = this.createArrowSprite(block.dir);
+        arrow.setPosition(-width / 2 + arrow.width / 2 + 4, 0);
+        container.add(arrow);
+
+        // Length indicator (small text)
+        if (block.len > 1) {
+            const lenText = this.add.text(width / 2 - 8, 0, `${block.len}`, {
+                fontSize: '12px',
+                color: '#00d4ff',
+            });
+            lenText.setOrigin(1, 0.5);
+            container.add(lenText);
+        }
+
+        container.setData('block', block);
+        container.setSize(width, height);
+        container.setInteractive({ useHandCursor: true });
+
+        return container;
+    }
+
+    private getBlockDimensions(block: ArrowBlock): { width: number; height: number } {
+        const isHorizontal = block.dir === 'left' || block.dir === 'right';
+        const length = this.cellSize * block.len;
+        const thickness = this.cellSize * 0.8;
+        return isHorizontal
+            ? { width: length, height: thickness }
+            : { width: thickness, height: length };
+    }
+
+    private getBlockPixelPosition(block: ArrowBlock): { x: number; y: number } {
+        const { width, height } = this.getBlockDimensions(block);
+        return {
+            x: this.gridOffset.col + block.col * this.cellSize + width / 2,
+            y: this.gridOffset.row + block.row * this.cellSize + height / 2,
+        };
+    }
+
+    private createArrowSprite(dir: ArrowDirection): Phaser.GameObjects.Text {
+        const arrows = { up: '↑', down: '↓', left: '←', right: '→' };
+        return this.add.text(0, 0, arrows[dir], {
             fontSize: this.cellSize * 0.5,
             color: '#00d4ff',
             fontStyle: 'bold',
@@ -157,75 +141,53 @@ export class ArrowEscapeScene extends Phaser.Scene {
 
     private setupInput() {
         this.input.on('pointerdown', this.onPointerDown, this);
-        this.input.on('pointermove', this.onPointerMove, this);
         this.input.on('pointerup', this.onPointerUp, this);
     }
 
     private onPointerDown(pointer: Phaser.Input.Pointer) {
         const { x, y } = pointer;
-        const container = this.getContainerAt(x, y);
-        if (container && container.getData('type') === 'arrow') {
-            this.selectedArrow = {
-                row: container.getData('row'),
-                col: container.getData('col'),
-            };
-            this.startDragPos = new Phaser.Math.Vector2(x, y);
-            // Glow effect
-            (container.getAt(1) as Phaser.GameObjects.Text).setColor('#00ff88');
+        for (const container of this.blockContainers.values()) {
+            if (container.getBounds().contains(x, y)) {
+                const block = container.getData('block') as ArrowBlock;
+                this.selectedBlock = block;
+                this.startDragPos = new Phaser.Math.Vector2(x, y);
+                // Glow
+                (container.getAt(0) as Phaser.GameObjects.Rectangle).setStrokeStyle(3, 0x00ff88);
+                break;
+            }
         }
     }
 
-    private onPointerMove(pointer: Phaser.Input.Pointer) {
-        if (!this.selectedArrow || !this.startDragPos) return;
+    private onPointerUp(pointer: Phaser.Input.Pointer) {
+        if (!this.selectedBlock || !this.startDragPos) return;
 
         const { x, y } = pointer;
-        const distance = Phaser.Math.Distance.Between(x, y, this.startDragPos.x, this.startDragPos.y);
+        const dist = Phaser.Math.Distance.Between(x, y, this.startDragPos.x, this.startDragPos.y);
 
-        // Threshold: 20px
-        if (distance < 20) return;
-
-        const direction = this.getDragDirection(x, y);
-        if (!direction) return;
-
-        const from = this.selectedArrow;
-        const cell = this.grid[from.row][from.col];
-        if (cell.type !== 'arrow') return;
-
-        const result = tryMoveArrow({ grid: this.grid, moves: this.moves, isWon: false }, from);
-
-        if (result.moves > this.moves) {
-            // Valid move - animasyonla güncelle
-            this.moves = result.moves;
-            this.grid = result.grid;
-            this.animateMove(from, result);
+        // Click or drag in same direction
+        if (dist < 12) {
+            this.applySlide(this.selectedBlock);
+        } else {
+            const dragDir = this.getDragDirection(x, y);
+            if (dragDir === this.selectedBlock.dir) {
+                this.applySlide(this.selectedBlock);
+            } else {
+                this.invalidMove(this.selectedBlock);
+            }
         }
 
-        // Reset selection
-        this.selectedArrow = null;
-        this.startDragPos = null;
+        // Reset selection glow
+        for (const container of this.blockContainers.values()) {
+            (container.getAt(0) as Phaser.GameObjects.Rectangle).setStrokeStyle(2, 0x00d4ff);
+        }
 
-        // Re-render
-        this.time.delayedCall(200, () => {
-            this.createCells();
-        });
-    }
-
-    private onPointerUp() {
-        this.selectedArrow = null;
+        this.selectedBlock = null;
         this.startDragPos = null;
     }
 
-    private getContainerAt(x: number, y: number): any | null {
-        for (const container of this.arrowContainers.values()) {
-            if (container.getBounds().contains(x, y)) return container;
-        }
-        return null;
-    }
-
-    private getDragDirection(x: number, y: number): 'up' | 'down' | 'left' | 'right' | null {
+    private getDragDirection(x: number, y: number): ArrowDirection | null {
         const dx = x - this.startDragPos!.x;
         const dy = y - this.startDragPos!.y;
-
         if (Math.abs(dx) > Math.abs(dy)) {
             return dx > 0 ? 'right' : 'left';
         } else {
@@ -233,76 +195,109 @@ export class ArrowEscapeScene extends Phaser.Scene {
         }
     }
 
-    private animateMove(
-        from: Position,
-        result: { grid: GridCell[][]; moves: number; isWon: boolean }
-    ) {
-        const container = this.arrowContainers.get(`${from.row},${from.col}`);
+    private applySlide(block: ArrowBlock) {
+        const currentState: GameState = { blocks: this.blocks, moves: this.moves, isWon: false };
+        const result = slideBlock(currentState, block.id);
+
+        if (result.state.moves === this.moves) {
+            // No movement
+            this.invalidMove(block);
+            return;
+        }
+
+        // Update state
+        this.moves = result.state.moves;
+        this.blocks = result.state.blocks;
+
+        // Animate
+        this.animateSlide(block, result);
+    }
+
+    private invalidMove(block: ArrowBlock) {
+        const container = this.blockContainers.get(block.id);
+        if (!container) return;
+        this.tweens.add({
+            targets: container,
+            x: container.x + 5,
+            duration: 50,
+            yoyo: true,
+            repeat: 3,
+            onComplete: () => {
+                const pos = this.getBlockPixelPosition(block);
+                container.setPosition(pos.x, pos.y);
+            },
+        });
+    }
+
+    private animateSlide(block: ArrowBlock, result: SlideResult) {
+        const container = this.blockContainers.get(block.id);
         if (!container) return;
 
-        // Hedef pozisyon hesapla (move sonrası)
-        const arrowDir = (result.grid[from.row][from.col] as any).direction;
-        const targetPos = this.getTargetPosition(from.row, from.col, arrowDir);
+        const movedBlock = result.state.blocks.find((b: ArrowBlock) => b.id === block.id);
+        const wasRemoved = result.removed;
 
-        if (targetPos) {
-            // Move tween
+        if (wasRemoved) {
+            // Slide out then fade
+            const dirDelta = this.getDelta(block.dir);
+            const outX = container.x + dirDelta.col * this.cellSize * 2;
+            const outY = container.y + dirDelta.row * this.cellSize * 2;
+
             this.tweens.add({
                 targets: container,
-                x: targetPos.x,
-                y: targetPos.y,
-                duration: 150,
+                x: outX,
+                y: outY,
+                duration: 200,
                 ease: Phaser.Math.Easing.Quadratic.Out,
+                onComplete: () => {
+                    this.tweens.add({
+                        targets: container,
+                        scaleX: 0,
+                        scaleY: 0,
+                        alpha: 0,
+                        duration: 100,
+                        ease: Phaser.Math.Easing.Back.In,
+                        onComplete: () => {
+                            container.destroy();
+                            this.blockContainers.delete(block.id);
+                            this.checkWin();
+                        },
+                    });
+                },
             });
-        } else {
-            // Remove (exit/out-of-bounds) - fade out
+        } else if (movedBlock) {
+            // Move to new position
+            const newPos = this.getBlockPixelPosition(movedBlock);
             this.tweens.add({
                 targets: container,
-                scaleX: 0,
-                scaleY: 0,
-                alpha: 0,
-                duration: 120,
-                ease: Phaser.Math.Easing.Back.In,
-                onComplete: () => container.destroy(),
+                x: newPos.x,
+                y: newPos.y,
+                duration: 180,
+                ease: Phaser.Math.Easing.Quadratic.Out,
+                onComplete: () => {
+                    this.checkWin();
+                },
             });
         }
     }
 
-    private getTargetPosition(row: number, col: number, direction: string): { x: number; y: number } | null {
-        let dr = 0, dc = 0;
-        if (direction === 'up') dr = -1;
-        else if (direction === 'down') dr = 1;
-        else if (direction === 'left') dc = -1;
-        else if (direction === 'right') dc = 1;
-
-        const newRow = row + dr;
-        const newCol = col + dc;
-
-        if (newRow < 0 || newRow >= GRID_SIZE || newCol < 0 || newCol >= GRID_SIZE) return null;
-
-        return {
-            x: this.gridOffset.col + newCol * this.cellSize + this.cellSize / 2,
-            y: this.gridOffset.row + newRow * this.cellSize + this.cellSize / 2,
-        };
+    private getDelta(dir: ArrowDirection): { row: number; col: number } {
+        switch (dir) {
+            case 'up': return { row: -1, col: 0 };
+            case 'down': return { row: 1, col: 0 };
+            case 'left': return { row: 0, col: -1 };
+            case 'right': return { row: 0, col: 1 };
+        }
     }
 
-    private checkWinLoop() {
-        if (this.isWonValue) return;
-
-        const won = checkWin(this.grid);
-        if (won) {
+    private checkWin() {
+        const won = checkWin({ blocks: this.blocks, moves: this.moves, isWon: false });
+        if (won && !this.isWonValue) {
             this.isWonValue = true;
-            // Update registry state
-            this.registry.set('state', {
-                get moves() { return this.moves; },
-                get isWon() { return true; },
-            });
+            this.game.events.emit('WIN', { levelId: this.levelId, moves: this.moves });
         }
     }
 
     public get state() {
-        return {
-            moves: this.moves,
-            isWon: this.isWonValue,
-        };
+        return { moves: this.moves, isWon: this.isWonValue };
     }
 }

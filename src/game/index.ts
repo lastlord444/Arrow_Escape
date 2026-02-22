@@ -1,18 +1,17 @@
 /** Arrow Escape - Game Engine Public API */
 
-export { GRID_SIZE } from './grid';
-export { parseLevel } from './level';
+export { GRID_SIZE, inBounds, getOccupiedCells, blocksCollide } from './grid';
 export { checkWin } from './rules';
-export { tryMoveArrow } from './move';
+export { slideBlock } from './move';
+export { getLevelById, getAllLevels, ALL_LEVELS } from './level';
 export { createArrowEscapeGame } from './phaser/createGame';
+export type { CreateGameResult } from './phaser/createGame';
 
 export type {
     ArrowDirection,
-    CellType,
-    GridCell,
+    ArrowBlock,
     GameState,
-    Position,
+    SlideResult,
     LevelDefinition,
+    Position,
 } from './types';
-
-export { charToCell, cellToChar } from './types';
