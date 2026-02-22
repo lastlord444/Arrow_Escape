@@ -13,7 +13,6 @@ export function GamePage() {
     const containerRef = useRef<HTMLDivElement>(null);
     const gameRef = useRef<{ game: any; renderer: 'webgl' | 'canvas' } | null>(null);
     const [moves, setMoves] = useState(0);
-    const [isWon, setIsWon] = useState(false);
     const [showModal, setShowModal] = useState(false);
     const [stars, setStars] = useState<0 | 1 | 2 | 3>(0);
     const [renderer, setRenderer] = useState<'webgl' | 'canvas'>('webgl');
@@ -25,8 +24,6 @@ export function GamePage() {
     const nextLevel = allLevels[levelIndex + 1];
 
     const handleWin = useCallback((winData: { levelId: string; moves: number }) => {
-        if (isWon) return;
-        setIsWon(true);
         const calcStars = getStarsForLevel(winData.moves);
         setStars(calcStars);
         setShowModal(true);
@@ -34,7 +31,7 @@ export function GamePage() {
         // Save progress
         updateLevelCompleted(levelId, winData.moves);
         unlockNextLevel(levelId, allLevels.map(l => l.id));
-    }, [levelId, allLevels, isWon]);
+    }, [levelId, allLevels]);
 
     const handleRestart = useCallback(() => {
         if (gameRef.current) {
@@ -42,7 +39,6 @@ export function GamePage() {
             gameRef.current = null;
         }
         setMoves(0);
-        setIsWon(false);
         setShowModal(false);
         if (levelDef && containerRef.current) {
             const result = createArrowEscapeGame(containerRef.current, levelDef);
@@ -55,7 +51,6 @@ export function GamePage() {
         if (!levelDef || !containerRef.current) return;
 
         // Reset state
-        setIsWon(false);
         setMoves(0);
         setShowModal(false);
 

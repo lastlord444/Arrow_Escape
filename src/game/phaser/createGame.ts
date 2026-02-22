@@ -14,6 +14,8 @@ export interface CreateGameResult {
     renderer: 'webgl' | 'canvas';
 }
 
+export type PhaserGame = Phaser.Game; // Legacy compatibility
+
 export function createArrowEscapeGame(
     domParent: HTMLElement,
     level: LevelDefinition
@@ -47,13 +49,8 @@ export function createArrowEscapeGame(
     // Level'ı scene'e geçir
     game.scene.start('ArrowEscape', { level });
 
-    // Detect renderer type after game boots
-    let renderer: 'webgl' | 'canvas' = 'canvas';
-    game.events.once('ready', () => {
-        renderer = game.renderer.type === Phaser.WEBGL ? 'webgl' : 'canvas';
-    });
+    // Detect renderer type (immediate fallback if events not ready)
+    const detectedRenderer = game.renderer?.type === Phaser.WEBGL ? 'webgl' : 'canvas';
 
-    return { game, renderer };
+    return { game, renderer: detectedRenderer };
 }
-
-export type PhaserGame = Phaser.Game;
