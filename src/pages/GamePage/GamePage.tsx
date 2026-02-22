@@ -10,13 +10,13 @@ import { updateLevelCompleted, unlockNextLevel, getStarsForLevel } from '@/ui/st
 
 export function GamePage() {
     const { id } = useParams<{ id: string }>();
-    // const navigate = useNavigate(); // Restart için gerekmiyor şu an
     const containerRef = useRef<HTMLDivElement>(null);
-    const gameRef = useRef<any>(null);
+    const gameRef = useRef<{ game: any; renderer: 'webgl' | 'canvas' } | null>(null);
     const [moves, setMoves] = useState(0);
     const [isWon, setIsWon] = useState(false);
     const [showModal, setShowModal] = useState(false);
     const [stars, setStars] = useState<0 | 1 | 2 | 3>(0);
+    const [renderer, setRenderer] = useState<'webgl' | 'canvas'>('webgl');
 
     const levelId = id || '';
     const levelDef = getLevelById(levelId);
@@ -24,18 +24,30 @@ export function GamePage() {
     const levelIndex = allLevels.findIndex(l => l.id === levelId);
     const nextLevel = allLevels[levelIndex + 1];
 
-    // Restart handler
+    const handleWin = useCallback((winData: { levelId: string; moves: number }) => {
+        if (isWon) return;
+        setIsWon(true);
+        const calcStars = getStarsForLevel(winData.moves);
+        setStars(calcStars);
+        setShowModal(true);
+        setMoves(winData.moves);
+        // Save progress
+        updateLevelCompleted(levelId, winData.moves);
+        unlockNextLevel(levelId, allLevels.map(l => l.id));
+    }, [levelId, allLevels, isWon]);
+
     const handleRestart = useCallback(() => {
         if (gameRef.current) {
-            gameRef.current.destroy(true);
+            gameRef.current.game.destroy(true);
             gameRef.current = null;
         }
         setMoves(0);
         setIsWon(false);
         setShowModal(false);
         if (levelDef && containerRef.current) {
-            const game = createArrowEscapeGame(containerRef.current, levelDef);
-            gameRef.current = game;
+            const result = createArrowEscapeGame(containerRef.current, levelDef);
+            gameRef.current = result;
+            setRenderer(result.renderer);
         }
     }, [levelDef]);
 
@@ -48,33 +60,29 @@ export function GamePage() {
         setShowModal(false);
 
         // Create game
-        const game = createArrowEscapeGame(containerRef.current, levelDef);
-        gameRef.current = game;
+        const result = createArrowEscapeGame(containerRef.current, levelDef);
+        gameRef.current = result;
+        setRenderer(result.renderer);
 
-        // Poll moves from Phaser scene
+        // Listen for WIN event from Phaser
+        const winHandler = (winData: any) => handleWin(winData);
+        result.game.events.on('WIN', winHandler);
+
+        // Poll moves from Phaser scene (keep for moves counter)
         const interval = setInterval(() => {
-            const scene = game.scene.getScene('ArrowEscape');
+            const scene = result.game.scene.getScene('ArrowEscape');
             if (scene && (scene as any).state) {
-                const state = (scene as any).state;
-                setMoves(state.moves);
-                if (state.isWon && !isWon) {
-                    setIsWon(true);
-                    const calcStars = getStarsForLevel(state.moves);
-                    setStars(calcStars);
-                    setShowModal(true);
-                    // Save progress
-                    updateLevelCompleted(levelId, state.moves);
-                    unlockNextLevel(levelId, allLevels.map(l => l.id));
-                }
+                setMoves((scene as any).state.moves);
             }
         }, 300);
 
         return () => {
             clearInterval(interval);
-            game.destroy(true);
+            result.game.events.off('WIN', winHandler);
+            result.game.destroy(true);
             gameRef.current = null;
         };
-    }, [levelId, levelDef, allLevels, isWon]);
+    }, [levelId, levelDef, handleWin]);
 
     const handleCloseModal = () => {
         setShowModal(false);
@@ -113,6 +121,22 @@ export function GamePage() {
                 />
 
                 <PowerBar onRestart={handleRestart} undoDisabled={true} />
+
+                {renderer === 'canvas' && (
+                    <div style={{
+                        position: 'absolute',
+                        bottom: 70,
+                        left: 10,
+                        backgroundColor: 'rgba(255,165,0,0.8)',
+                        color: '#000',
+                        fontSize: '11px',
+                        padding: '4px 8px',
+                        borderRadius: '4px',
+                        fontWeight: 'bold',
+                    }}>
+                        Canvas Mode (WebGL unsupported)
+                    </div>
+                )}
 
                 {showModal && (
                     <LevelCompleteModal

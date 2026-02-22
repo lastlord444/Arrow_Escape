@@ -3,7 +3,7 @@
 export { GRID_SIZE } from './grid';
 export { parseLevel } from './level';
 export { checkWin } from './rules';
-export { tryMoveArrow } from './move';
+export { tryMoveArrow, trySlideArrow } from './move';
 export { createArrowEscapeGame } from './phaser/createGame';
 
 export type {
@@ -13,6 +13,8 @@ export type {
     GameState,
     Position,
     LevelDefinition,
+    SlideResult,
+    AnimalRunPath,
 } from './types';
 
 export { charToCell, cellToChar } from './types';
