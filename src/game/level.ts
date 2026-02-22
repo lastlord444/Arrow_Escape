@@ -1,66 +1,77 @@
-/** Arrow Escape - Level Parser */
+/** Arrow Escape - Level Loader (Block format) */
 
-import type { LevelDefinition, GridCell } from './types';
-import { charToCell, cellToChar } from './types';
-import { GRID_SIZE } from './grid';
+import type { LevelDefinition } from './types';
 
-export { cellToChar };
+// Block-based level examples
+export const LEVEL_1: LevelDefinition = {
+    id: 'level-1',
+    gridWidth: 6,
+    gridHeight: 6,
+    blocks: [
+        { id: 'b1', len: 2, dir: 'up', row: 5, col: 2 },
+        { id: 'b2', len: 1, dir: 'up', row: 5, col: 4 },
+    ],
+    meta: { name: 'Tutorial' },
+};
 
-/**
- * LevelDefinition'dan GridCell[][] oluştur.
- * Doğrulama kuralları:
- * - Grid tam 6 satır ve her satır 6 karakter olmalı
- * - En az 1 animal (A) olmalı
- * - En az 1 exit (E) olmalı
- * - Birden fazla A veya E olamaz (MVP0)
- */
-export function parseLevel(levelDef: LevelDefinition): GridCell[][] {
-    const { grid: rows } = levelDef;
+export const LEVEL_2: LevelDefinition = {
+    id: 'level-2',
+    gridWidth: 6,
+    gridHeight: 6,
+    blocks: [
+        { id: 'b1', len: 3, dir: 'up', row: 4, col: 1 },
+        { id: 'b2', len: 2, dir: 'left', row: 3, col: 4 },
+        { id: 'b3', len: 1, dir: 'up', row: 5, col: 3 },
+    ],
+    meta: { name: 'S-Curve' },
+};
 
-    // Satır sayısı kontrolü
-    if (rows.length !== GRID_SIZE) {
-        throw new Error(
-            `Level "${levelDef.id}": Grid ${GRID_SIZE} satır olmalı, ${rows.length} satır verildi.`
-        );
-    }
+export const LEVEL_3: LevelDefinition = {
+    id: 'level-3',
+    gridWidth: 6,
+    gridHeight: 6,
+    blocks: [
+        { id: 'b1', len: 2, dir: 'up', row: 5, col: 1 },
+        { id: 'b2', len: 2, dir: 'right', row: 4, col: 0 },
+        { id: 'b3', len: 3, dir: 'up', row: 5, col: 4 },
+        { id: 'b4', len: 1, dir: 'left', row: 3, col: 5 },
+    ],
+    meta: { name: 'Crossfire' },
+};
 
-    // Her satır 6 karakter mi?
-    for (let r = 0; r < GRID_SIZE; r++) {
-        if (rows[r].length !== GRID_SIZE) {
-            throw new Error(
-                `Level "${levelDef.id}": Satır ${r} tam ${GRID_SIZE} karakter olmalı, ${rows[r].length} karakter verildi.`
-            );
-        }
-    }
+export const LEVEL_4: LevelDefinition = {
+    id: 'level-4',
+    gridWidth: 6,
+    gridHeight: 6,
+    blocks: [
+        { id: 'b1', len: 3, dir: 'up', row: 5, col: 0 },
+        { id: 'b2', len: 2, dir: 'down', row: 1, col: 1 },
+        { id: 'b3', len: 4, dir: 'right', row: 2, col: 0 },
+        { id: 'b4', len: 2, dir: 'up', row: 5, col: 4 },
+    ],
+    meta: { name: 'Traffic Jam' },
+};
 
-    // Parse et
-    const grid: GridCell[][] = rows.map(row =>
-        row.split('').map(ch => charToCell(ch))
-    );
+export const LEVEL_5: LevelDefinition = {
+    id: 'level-5',
+    gridWidth: 6,
+    gridHeight: 6,
+    blocks: [
+        { id: 'b1', len: 4, dir: 'up', row: 5, col: 1 },
+        { id: 'b2', len: 3, dir: 'right', row: 3, col: 0 },
+        { id: 'b3', len: 2, dir: 'left', row: 4, col: 5 },
+        { id: 'b4', len: 2, dir: 'down', row: 0, col: 2 },
+        { id: 'b5', len: 1, dir: 'up', row: 5, col: 4 },
+    ],
+    meta: { name: 'Final Test' },
+};
 
-    // Animal ve Exit sayısı kontrolü
-    let animalCount = 0;
-    let exitCount = 0;
+export const ALL_LEVELS = [LEVEL_1, LEVEL_2, LEVEL_3, LEVEL_4, LEVEL_5];
 
-    for (let r = 0; r < GRID_SIZE; r++) {
-        for (let c = 0; c < GRID_SIZE; c++) {
-            if (grid[r][c].type === 'animal') animalCount++;
-            if (grid[r][c].type === 'exit') exitCount++;
-        }
-    }
+export function getLevelById(id: string): LevelDefinition | undefined {
+    return ALL_LEVELS.find(l => l.id === id);
+}
 
-    if (animalCount === 0) {
-        throw new Error(`Level "${levelDef.id}": En az 1 animal (A) olmalı.`);
-    }
-    if (exitCount === 0) {
-        throw new Error(`Level "${levelDef.id}": En az 1 exit (E) olmalı.`);
-    }
-    if (animalCount > 1) {
-        throw new Error(`Level "${levelDef.id}": Birden fazla animal (A) olamaz. Bulunan: ${animalCount}`);
-    }
-    if (exitCount > 1) {
-        throw new Error(`Level "${levelDef.id}": Birden fazla exit (E) olamaz. Bulunan: ${exitCount}`);
-    }
-
-    return grid;
+export function getAllLevels(): LevelDefinition[] {
+    return ALL_LEVELS;
 }

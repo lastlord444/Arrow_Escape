@@ -1,78 +1,43 @@
-/** Arrow Escape - Tip Tanımları */
+/** Arrow Escape - Tip Tanımları (Arrow Out) */
 
 /** Ok yönleri */
 export type ArrowDirection = 'up' | 'down' | 'left' | 'right';
 
-/** Hücre tipleri */
-export type CellType = 'empty' | 'arrow' | 'animal' | 'exit';
-
-/** Grid pozisyonu (row, col) */
-export interface Position {
-    row: number;
-    col: number;
-}
-
-/** Tek bir grid hücresi */
-export interface GridCell {
-    type: CellType;
-    direction?: ArrowDirection;
+/** Arrow Blok (1×N) */
+export interface ArrowBlock {
+    id: string;
+    len: number;           // 1..6 (blok uzunluğu)
+    dir: ArrowDirection;  // Yön
+    row: number;          // Başlangıç satır
+    col: number;          // Başlangıç sütun
 }
 
 /** Oyun durumu */
 export interface GameState {
-    grid: GridCell[][];
+    blocks: ArrowBlock[];
     moves: number;
     isWon: boolean;
 }
 
-/** Level tanımı (JSON formatı) */
+/** Slide hareketi sonucu */
+export interface SlideResult {
+    state: GameState;
+    removed: boolean;     // Edge'den çıktı mı?
+}
+
+/** Level tanımı (yeni format) */
 export interface LevelDefinition {
     id: string;
-    grid: string[];
+    blocks: ArrowBlock[];
+    gridWidth: number;
+    gridHeight: number;
     meta?: {
         name?: string;
     };
 }
 
-/**
- * Grid string encoding:
- * '.' = empty
- * '^' = ok (yukarı)
- * 'v' = ok (aşağı)
- * '<' = ok (sol)
- * '>' = ok (sağ)
- * 'A' = animal (hayvan)
- * 'E' = exit (çıkış)
- */
-
-/** String karakter → hücre dönüşümü */
-export function charToCell(ch: string): GridCell {
-    switch (ch) {
-        case '.': return { type: 'empty' };
-        case '^': return { type: 'arrow', direction: 'up' };
-        case 'v': return { type: 'arrow', direction: 'down' };
-        case '<': return { type: 'arrow', direction: 'left' };
-        case '>': return { type: 'arrow', direction: 'right' };
-        case 'A': return { type: 'animal' };
-        case 'E': return { type: 'exit' };
-        default: return { type: 'empty' };
-    }
-}
-
-/** Hücre → string karakter dönüşümü */
-export function cellToChar(cell: GridCell): string {
-    switch (cell.type) {
-        case 'empty': return '.';
-        case 'animal': return 'A';
-        case 'exit': return 'E';
-        case 'arrow':
-            switch (cell.direction) {
-                case 'up': return '^';
-                case 'down': return 'v';
-                case 'left': return '<';
-                case 'right': return '>';
-                default: return '.';
-            }
-        default: return '.';
-    }
+/** Konum */
+export interface Position {
+    row: number;
+    col: number;
 }

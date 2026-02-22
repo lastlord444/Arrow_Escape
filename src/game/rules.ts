@@ -1,28 +1,10 @@
-/** Arrow Escape - Win Condition Kontrolü */
+/** Arrow Escape - Win Condition */
 
-import type { GridCell } from './types';
-import { findCell, countArrowsBetween } from './grid';
+import type { GameState } from './types';
 
 /**
- * Win condition kontrolü:
- * "Hayvan ile çıkış aynı satır veya sütunda ve arada hiç ok kalmadıysa WIN."
+ * Win koşulu: Tüm bloklar board'dan çıkarıldı.
  */
-export function checkWin(grid: GridCell[][]): boolean {
-    const animalPos = findCell(grid, 'animal');
-    const exitPos = findCell(grid, 'exit');
-
-    // Animal veya exit yoksa win olamaz
-    if (!animalPos || !exitPos) {
-        return false;
-    }
-
-    // Aynı satır veya sütun değilse kaybet
-    if (animalPos.row !== exitPos.row && animalPos.col !== exitPos.col) {
-        return false;
-    }
-
-    // Arada ok var mı?
-    const arrowsBetween = countArrowsBetween(grid, animalPos, exitPos);
-
-    return arrowsBetween === 0;
+export function checkWin(state: GameState): boolean {
+    return state.blocks.length === 0;
 }

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { getLevelById, getAllLevels } from '@/content/levels/index';
-import { createArrowEscapeGame } from '@/game';
+import { createArrowEscapeGame, type CreateGameResult } from '@/game';
 import { Page } from '@/components/Page';
 import { Hud } from '@/ui/components/Hud';
 import { PowerBar } from '@/ui/components/PowerBar';
@@ -10,11 +10,9 @@ import { updateLevelCompleted, unlockNextLevel, getStarsForLevel } from '@/ui/st
 
 export function GamePage() {
     const { id } = useParams<{ id: string }>();
-    // const navigate = useNavigate(); // Restart için gerekmiyor şu an
     const containerRef = useRef<HTMLDivElement>(null);
-    const gameRef = useRef<any>(null);
+    const gameRef = useRef<CreateGameResult | null>(null);
     const [moves, setMoves] = useState(0);
-    const [isWon, setIsWon] = useState(false);
     const [showModal, setShowModal] = useState(false);
     const [stars, setStars] = useState<0 | 1 | 2 | 3>(0);
 
@@ -27,15 +25,14 @@ export function GamePage() {
     // Restart handler
     const handleRestart = useCallback(() => {
         if (gameRef.current) {
-            gameRef.current.destroy(true);
+            gameRef.current.game.destroy(true);
             gameRef.current = null;
         }
         setMoves(0);
-        setIsWon(false);
         setShowModal(false);
         if (levelDef && containerRef.current) {
-            const game = createArrowEscapeGame(containerRef.current, levelDef);
-            gameRef.current = game;
+            const result = createArrowEscapeGame(containerRef.current, levelDef);
+            gameRef.current = result;
         }
     }, [levelDef]);
 
@@ -43,22 +40,20 @@ export function GamePage() {
         if (!levelDef || !containerRef.current) return;
 
         // Reset state
-        setIsWon(false);
         setMoves(0);
         setShowModal(false);
 
         // Create game
-        const game = createArrowEscapeGame(containerRef.current, levelDef);
-        gameRef.current = game;
+        const result = createArrowEscapeGame(containerRef.current, levelDef);
+        gameRef.current = result;
 
         // Poll moves from Phaser scene
         const interval = setInterval(() => {
-            const scene = game.scene.getScene('ArrowEscape');
+            const scene = result.game.scene.getScene('ArrowEscape');
             if (scene && (scene as any).state) {
                 const state = (scene as any).state;
                 setMoves(state.moves);
-                if (state.isWon && !isWon) {
-                    setIsWon(true);
+                if (state.isWon && showModal === false) {
                     const calcStars = getStarsForLevel(state.moves);
                     setStars(calcStars);
                     setShowModal(true);
@@ -71,10 +66,10 @@ export function GamePage() {
 
         return () => {
             clearInterval(interval);
-            game.destroy(true);
+            result.game.destroy(true);
             gameRef.current = null;
         };
-    }, [levelId, levelDef, allLevels, isWon]);
+    }, [levelId, levelDef, allLevels, showModal]);
 
     const handleCloseModal = () => {
         setShowModal(false);
