@@ -35,7 +35,11 @@ export function GamePage() {
 
     const handleRestart = useCallback(() => {
         if (gameRef.current) {
-            gameRef.current.game.destroy(true);
+            try {
+                gameRef.current.game.destroy(true);
+            } catch (e) {
+                console.warn('Game destroy failed:', e);
+            }
             gameRef.current = null;
         }
         setMoves(0);
@@ -73,8 +77,14 @@ export function GamePage() {
 
         return () => {
             clearInterval(interval);
-            result.game.events.off('WIN', winHandler);
-            result.game.destroy(true);
+            if (result?.game) {
+                try {
+                    result.game.events.off('WIN', winHandler);
+                    result.game.destroy(true);
+                } catch (e) {
+                    console.warn('Cleanup failed:', e);
+                }
+            }
             gameRef.current = null;
         };
     }, [levelId, levelDef, handleWin]);
